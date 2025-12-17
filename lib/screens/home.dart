@@ -6,151 +6,179 @@ import 'package:jazone_1/screens/incidentform.dart';
 import 'package:jazone_1/screens/utils/color_utils.dart';
 
 class HomePage extends StatefulWidget {
-  const HomePage({super.key});
+  const HomePage({Key? key}) : super(key: key);
 
   @override
   State<HomePage> createState() => _HomePageState();
 }
 
 class _HomePageState extends State<HomePage> {
-  late List<CameraDescription> _cameras;
-  CameraController? _controller;
+  CameraController? _cameraController;
   bool _isCameraInitialized = false;
-  bool _showSnapTips = true; // Show overlay initially
+  int _selectedCameraIndex = 0;
+  FlashMode _flashMode = FlashMode.off;
+
+  List<CameraDescription>? _cameras;
 
   @override
   void initState() {
     super.initState();
-    _initCamera();
+    _initializeCamera();
   }
 
-  Future<void> _initCamera() async {
+  Future<void> _initializeCamera() async {
     _cameras = await availableCameras();
-    if (_cameras.isNotEmpty) {
-      _controller = CameraController(_cameras[0], ResolutionPreset.medium);
-      await _controller!.initialize();
-      if (!mounted) return;
-      setState(() {
-        _isCameraInitialized = true;
-      });
-    }
+    _cameraController = CameraController(
+      _cameras![_selectedCameraIndex],
+      ResolutionPreset.high,
+      enableAudio: false,
+    );
+
+    await _cameraController!.initialize();
+    await _cameraController!.setFlashMode(_flashMode);
+
+    if (!mounted) return;
+    setState(() => _isCameraInitialized = true);
   }
 
-  Future<void> _takePicture() async {
-    if (!_controller!.value.isInitialized) return;
+  void _toggleFlash() {
+    _flashMode = _flashMode == FlashMode.off ? FlashMode.torch : FlashMode.off;
+    _cameraController!.setFlashMode(_flashMode);
+    setState(() {});
+  }
 
-    final XFile image = await _controller!.takePicture();
+  void _switchCamera() async {
+    _selectedCameraIndex = _selectedCameraIndex == 0 ? 1 : 0;
+    await _initializeCamera();
+  }
+
+  Future<void> _captureImage() async {
+    if (!_cameraController!.value.isInitialized) return;
+    XFile file = await _cameraController!.takePicture();
+
+    // Navigate to IncidentFormPage with captured image
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (_) => IncidentFormPage(imageFile: File(image.path)),
+        builder: (_) => IncidentFormPage(imageFile: File(file.path)),
       ),
     );
   }
 
-  Future<void> _pickImageFromGallery() async {
-    final ImagePicker picker = ImagePicker();
-    final XFile? image = await picker.pickImage(
-      source: ImageSource.gallery,
-      imageQuality: 85,
-    );
+  Future<void> _pickFromGallery() async {
+    final picker = ImagePicker();
+    final XFile? file = await picker.pickImage(source: ImageSource.gallery);
 
-    if (image != null) {
+    if (file != null) {
+      // Navigate to IncidentFormPage with selected image
       Navigator.push(
         context,
         MaterialPageRoute(
-          builder: (_) => IncidentFormPage(imageFile: File(image.path)),
+          builder: (_) => IncidentFormPage(imageFile: File(file.path)),
         ),
       );
     }
   }
 
+  void _showHelpDialog() {
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text("Snap Tips"),
+        content: Image.asset('assets/tips.png'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text("Close"),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   void dispose() {
-    _controller?.dispose();
+    _cameraController?.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    final size = MediaQuery.of(context).size;
-    final previewHeight = size.height * 0.5; // Camera preview height
-    final previewWidth = size.width * 0.9;   // Camera preview width
+    double focusWidth = 250;
+    double focusHeight = 410;
 
     return Scaffold(
-      backgroundColor: Colors.black,
-      body: _isCameraInitialized
-          ? Stack(
-              children: [
-                Center(
+      backgroundColor: const Color.fromARGB(255, 3, 27, 62),
+      body: Stack(
+        children: [
+          _isCameraInitialized
+              ? Center(
                   child: Container(
-                    height: previewHeight,
-                    width: previewWidth,
+                    width: focusWidth,
+                    height: focusHeight,
                     decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(20),
-                      // overflow: BorderOverflow.hidden,
+                      border: Border.all(
+                        color: const Color.fromARGB(255, 207, 129, 4),
+                        width: 4,
+                      ),
                     ),
-                    child: CameraPreview(_controller!),
+                    child: CameraPreview(_cameraController!),
+                  ),
+                )
+              : const Center(child: CircularProgressIndicator()),
+
+          /// Top Buttons
+          Positioned(
+            top: 90,
+            left: 16,
+            child: Row(
+              children: [
+                IconButton(
+                  onPressed: _toggleFlash,
+                  icon: Icon(
+                    _flashMode == FlashMode.torch
+                        ? Icons.flash_on
+                        : Icons.flash_off,
+                    color: Colors.white,
                   ),
                 ),
-                if (_showSnapTips)
-                  GestureDetector(
-                    onTap: () {
-                      setState(() {
-                        _showSnapTips = false; // Hide overlay on tap
-                      });
-                    },
-                    child: Container(
-                      color: Colors.black54,
-                      alignment: Alignment.center,
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Image.asset(
-                            'assets/snap_tips.png', // Replace with your overlay image
-                            width: 200,
-                          ),
-                          const SizedBox(height: 20),
-                          const Text(
-                            'Tap anywhere to continue',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                Positioned(
-                  bottom: 40,
-                  left: 0,
-                  right: 0,
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                    children: [
-                      // Gallery Button
-                      FloatingActionButton(
-                        heroTag: "gallery",
-                        backgroundColor: Colors.white54,
-                        onPressed: _pickImageFromGallery,
-                        child: const Icon(Icons.photo_library, color: Colors.black),
-                      ),
-
-                      // Capture Button
-                      FloatingActionButton(
-                        heroTag: "capture",
-                        backgroundColor: AppColors.buttonAccent,
-                        onPressed: _takePicture,
-                        child: const Icon(Icons.camera_alt, color: Colors.white),
-                      ),
-                    ],
-                  ),
+                const SizedBox(width: 16),
+                IconButton(
+                  onPressed: _switchCamera,
+                  icon: const Icon(Icons.switch_camera, color: Colors.white),
                 ),
               ],
-            )
-          : const Center(child: CircularProgressIndicator()),
+            ),
+          ),
+
+          /// Bottom Buttons
+          Positioned(
+            bottom: 60,
+            left: 0,
+            right: 0,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceAround,
+              children: [
+                FloatingActionButton(
+                  onPressed: _pickFromGallery,
+                  backgroundColor: Colors.white,
+                  child: const Icon(Icons.photo, color: Colors.black),
+                ),
+                FloatingActionButton(
+                  onPressed: _captureImage,
+                  backgroundColor: const Color.fromARGB(255, 206, 89, 6),
+                  child: const Icon(Icons.camera, color: Colors.white),
+                ),
+                FloatingActionButton(
+                  onPressed: _showHelpDialog,
+                  backgroundColor: Colors.white,
+                  child: const Icon(Icons.help_outline, color: Colors.black),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
