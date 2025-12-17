@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "562766211236",
+    "project_id": "jazonee-4765b",
+    "storage_bucket": "jazonee-4765b.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:562766211236:android:661eaf41eb468bc14cde31",
+        "android_client_info": {
+          "package_name": "com.example.jazone_1"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDmES7xivY4kGv9kppCLJxOhfHbj_iX3sQ"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
