@@ -28,6 +28,7 @@ class _HomePageState extends State<HomePage> {
 
   Future<void> _initializeCamera() async {
     _cameras = await availableCameras();
+
     _cameraController = CameraController(
       _cameras![_selectedCameraIndex],
       ResolutionPreset.high,
@@ -49,14 +50,15 @@ class _HomePageState extends State<HomePage> {
 
   void _switchCamera() async {
     _selectedCameraIndex = _selectedCameraIndex == 0 ? 1 : 0;
+    setState(() => _isCameraInitialized = false);
     await _initializeCamera();
   }
 
   Future<void> _captureImage() async {
     if (!_cameraController!.value.isInitialized) return;
+
     XFile file = await _cameraController!.takePicture();
 
-    // Navigate to IncidentFormPage with captured image
     Navigator.push(
       context,
       MaterialPageRoute(
@@ -70,7 +72,6 @@ class _HomePageState extends State<HomePage> {
     final XFile? file = await picker.pickImage(source: ImageSource.gallery);
 
     if (file != null) {
-      // Navigate to IncidentFormPage with selected image
       Navigator.push(
         context,
         MaterialPageRoute(
@@ -104,32 +105,94 @@ class _HomePageState extends State<HomePage> {
 
   @override
   Widget build(BuildContext context) {
-    double focusWidth = 250;
-    double focusHeight = 410;
+    double focusWidth = 320;
+    double focusHeight = 400;
 
     return Scaffold(
-      backgroundColor: const Color.fromARGB(255, 3, 27, 62),
+      backgroundColor: AppColors.background,
       body: Stack(
         children: [
+          /// CAMERA PREVIEW
           _isCameraInitialized
               ? Center(
                   child: Container(
                     width: focusWidth,
                     height: focusHeight,
                     decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(20),
                       border: Border.all(
-                        color: const Color.fromARGB(255, 207, 129, 4),
-                        width: 4,
+                        color: AppColors.primaryBlue,
+                        width: 3,
                       ),
                     ),
-                    child: CameraPreview(_cameraController!),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(18),
+                      child: CameraPreview(_cameraController!),
+                    ),
                   ),
                 )
               : const Center(child: CircularProgressIndicator()),
 
-          /// Top Buttons
+          /// DARK GRADIENT OVERLAY
+          Container(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [
+                  Colors.black.withOpacity(0.55),
+                  Colors.transparent,
+                  Colors.black.withOpacity(0.65),
+                ],
+              ),
+            ),
+          ),
+
+          /// LOGO + TITLE
           Positioned(
-            top: 90,
+            top: 60,
+            left: 0,
+            right: 0,
+            child: Column(
+              children: [
+                Container(
+                  width: 70,
+                  height: 70,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    boxShadow: [
+                      BoxShadow(
+                        color: AppColors.primaryBlue.withOpacity(0.4),
+                        blurRadius: 20,
+                        offset: const Offset(0, 10),
+                      ),
+                    ],
+                  ),
+                  child: ClipOval(
+                    child: Image.asset('assets/logo.png', fit: BoxFit.cover),
+                  ),
+                ),
+                const SizedBox(height: 10),
+                Text(
+                  'Janiuay Alert Zone',
+                  style: TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'Capture incident evidence',
+                  style: TextStyle(fontSize: 14, color: Colors.white70),
+                ),
+              ],
+            ),
+          ),
+
+          /// TOP CONTROLS
+          Positioned(
+            top: 60,
             left: 16,
             child: Row(
               children: [
@@ -142,7 +205,7 @@ class _HomePageState extends State<HomePage> {
                     color: Colors.white,
                   ),
                 ),
-                const SizedBox(width: 16),
+                const SizedBox(width: 10),
                 IconButton(
                   onPressed: _switchCamera,
                   icon: const Icon(Icons.switch_camera, color: Colors.white),
@@ -151,9 +214,9 @@ class _HomePageState extends State<HomePage> {
             ),
           ),
 
-          /// Bottom Buttons
+          /// BOTTOM CONTROLS
           Positioned(
-            bottom: 60,
+            bottom: 50,
             left: 0,
             right: 0,
             child: Row(
@@ -166,7 +229,7 @@ class _HomePageState extends State<HomePage> {
                 ),
                 FloatingActionButton(
                   onPressed: _captureImage,
-                  backgroundColor: const Color.fromARGB(255, 206, 89, 6),
+                  backgroundColor: AppColors.primaryBlue,
                   child: const Icon(Icons.camera, color: Colors.white),
                 ),
                 FloatingActionButton(
